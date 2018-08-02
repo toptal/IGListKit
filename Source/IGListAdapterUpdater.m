@@ -381,7 +381,7 @@ void convertReloadToDeleteInsert(NSMutableIndexSet *reloads,
     __weak __typeof__(collectionView) weakCollectionView = collectionView;
 
     // dispatch after a given amount of time to coalesce other updates and execute as one
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, self.coalescanceTime * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    void (^work)() = ^{
         if (weakSelf.state != IGListBatchUpdateStateIdle
             || ![weakSelf hasChanges]) {
             return;
@@ -392,7 +392,12 @@ void convertReloadToDeleteInsert(NSMutableIndexSet *reloads,
         } else {
             [weakSelf performBatchUpdatesWithCollectionView:weakCollectionView];
         }
-    });
+    };
+    if (self.coalescanceTime != 0) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, self.coalescanceTime * NSEC_PER_SEC), dispatch_get_main_queue(), work);
+    } else {
+        work();
+    }
 }
 
 
