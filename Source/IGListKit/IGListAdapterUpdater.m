@@ -422,7 +422,7 @@ static NSArray<NSIndexPath *> *convertSectionReloadToItemUpdates(NSIndexSet *sec
     // (diffing, etc) is done on main. dispatch_async does not garauntee a full runloop turn will pass though.
     // see -performUpdateWithCollectionView:fromObjects:toObjects:animated:objectTransitionBlock:completion: for more
     // details on how coalescence is done.
-    dispatch_async(dispatch_get_main_queue(), ^{
+    void (^work)() = ^{
         if (weakSelf.state != IGListBatchUpdateStateIdle
             || ![weakSelf hasChanges]) {
             return;
@@ -433,7 +433,12 @@ static NSArray<NSIndexPath *> *convertSectionReloadToItemUpdates(NSIndexSet *sec
         } else {
             [weakSelf performBatchUpdatesWithCollectionViewBlock:collectionViewBlock];
         }
-    });
+    };
+    if (self.coalescanceTime != 0) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, self.coalescanceTime * NSEC_PER_SEC), dispatch_get_main_queue(), work);
+    } else {
+        work();
+    }
 }
 
 
